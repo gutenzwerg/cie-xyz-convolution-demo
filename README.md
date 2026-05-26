@@ -28,3 +28,31 @@ Created with support from ChatGPT / OpenAI
 CC BY-SA 4.0
 
 #ColourScience #ColorManagement #CIE #Printing #Visualization #Education #JavaScript #HTML
+
+# Language Switching / Internationalisation
+
+The user interface texts are stored centrally in the JavaScript object TEXT.
+
+To switch between English and German, search for:
+
+const UI_LANGUAGE = "en";
+
+and change it to:
+
+const UI_LANGUAGE = "de";
+
+Additional languages can easily be added by extending the TEXT object with another language block.
+
+The program logic, variable names and comments are intentionally kept in English so that AI tools and translators can generate additional language versions more reliably.
+
+A practical workflow for creating a new language version is:
+
+Copy one existing language block from the TEXT object.
+
+Rename it, for example:
+
+fr: { ... }
+Translate only the visible UI texts.
+Leave all JavaScript identifiers, formulas and internal structures unchanged.
+
+Because all visible text is collected in one place, AI tools such as ChatGPT can usually translate the interface reliably without modifying the program logic.
