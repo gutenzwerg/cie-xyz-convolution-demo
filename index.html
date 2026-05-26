@@ -1,0 +1,680 @@
+<!doctype html>
+<!--
+============================================================
+LANGUAGE SELECTION
+------------------------------------------------------------
+Search for:
+const UI_LANGUAGE = "en";
+
+Change "en" to "de" to switch to the German version.
+Additional languages can be added in the TEXT object below.
+============================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CIE XYZ Convolution Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --grid: #e5e7eb;
+      --blue: #2563eb;
+      --amber: #d97706;
+      --green: #16a34a;
+      --red: #dc2626;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header { padding: 18px 24px 8px; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      max-width: 1050px;
+      line-height: 1.4;
+    }
+    main {
+      display: grid;
+      gap: 14px;
+      padding: 0 24px 24px;
+    }
+    .row {
+      background: var(--card);
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      box-shadow: 0 3px 12px rgba(15,23,42,0.05);
+      padding: 14px;
+    }
+    .row h2 { margin: 0 0 10px; font-size: 16px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .side-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+      justify-content: flex-start;
+      min-height: 230px;
+      padding: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      background: #f9fafb;
+    }
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .control-heading {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+    label { font-size: 14px; color: var(--muted); }
+    select, button, input[type="range"] { font: inherit; }
+    select, button {
+      border: 1px solid #d1d5db;
+      background: white;
+      border-radius: 8px;
+      padding: 7px 10px;
+    }
+    button { cursor: pointer; }
+    button:hover { background: #f3f4f6; }
+    .peak-control {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 6px 10px;
+    }
+    .peak-control.visible { display: flex; }
+    #peakValue { font-variant-numeric: tabular-nums; min-width: 58px; color: var(--text); }
+    .hint { font-size: 13px; color: var(--muted); }
+    .numbers {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(120px, 1fr));
+      gap: 14px;
+    }
+    .numcard {
+      border-radius: 14px;
+      padding: 16px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      text-align: center;
+    }
+    .numlabel { color: var(--muted); font-size: 14px; margin-bottom: 6px; }
+    .numvalue { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    canvas {
+      width: 100%;
+      height: 230px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      touch-action: none;
+    }
+    .caption {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .formula {
+      font-family: "DejaVu Sans Mono", Consolas, monospace;
+      background: #f3f4f6;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #374151;
+      display: inline-block;
+      margin-top: 8px;
+    }
+    @media (max-width: 900px) {
+      .grid2, .grid3, .numbers { grid-template-columns: 1fr; }
+      canvas { height: 200px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="title"></h1>
+    <div id="intro" class="subtitle"></div>
+  </header>
+
+  <main>
+    <section class="row">
+      <h2 id="row1Title"></h2>
+      <div class="grid2">
+        <div>
+          <canvas id="reflectanceCanvas"></canvas>
+          <div id="reflectanceCaption" class="caption"></div>
+        </div>
+        <div>
+          <canvas id="illuminantCanvas"></canvas>
+          <div id="illuminantCaption" class="caption"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="row">
+      <h2 id="row2Title"></h2>
+      <div class="grid2">
+        <div>
+          <canvas id="stimulusCanvas"></canvas>
+          <div id="stimulusCaption" class="caption"></div>
+        </div>
+        <div class="side-controls">
+          <div id="controlsTitle" class="control-heading"></div>
+          <label>
+            <input type="checkbox" id="discreteMode" />
+            <span id="discreteModeLabel"></span>
+          </label>
+          <label><span id="illuminantLabel"></span>
+            <select id="illuminant"></select>
+          </label>
+          <label class="peak-control" id="peakControl"><span id="peakLabel"></span>
+            <input id="peakSlider" type="range" min="380" max="730" step="5" value="555" />
+            <span id="peakValue">555 nm</span>
+          </label>
+          <div class="button-grid" id="sampleButtons"></div>
+          <span id="drawHint" class="hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="row">
+      <h2 id="row3Title"></h2>
+      <div class="grid3">
+        <div>
+          <canvas id="zCanvas"></canvas>
+          <div id="zCaption" class="caption"></div>
+        </div>
+        <div>
+          <canvas id="yCanvas"></canvas>
+          <div id="yCaption" class="caption"></div>
+        </div>
+        <div>
+          <canvas id="xCanvas"></canvas>
+          <div id="xCaption" class="caption"></div>
+        </div>
+      </div>
+      <div class="formula">X = Σ R(λ) · S(λ) · x̄(λ) &nbsp;&nbsp; Y = Σ R(λ) · S(λ) · ȳ(λ) &nbsp;&nbsp; Z = Σ R(λ) · S(λ) · z̄(λ)</div>
+    </section>
+
+    <section class="row">
+      <h2 id="row4Title"></h2>
+      <div class="numbers">
+        <div class="numcard"><div class="numlabel">Z</div><div class="numvalue" id="zVal">0</div></div>
+        <div class="numcard"><div class="numlabel">Y</div><div class="numvalue" id="yVal">0</div></div>
+        <div class="numcard"><div class="numlabel">X</div><div class="numvalue" id="xVal">0</div></div>
+      </div>
+      <div id="normalizationCaption" class="caption"></div>
+    </section>
+  </main>
+
+  <script>
+   
+    const UI_LANGUAGE = "en";
+
+    const TEXT = {
+      en: {
+        documentTitle: "CIE XYZ Convolution Demo",
+        title: "CIE XYZ: Convolution of Reflectance, Light and Colour Matching Functions",
+        introHtml: `
+          <p><strong>Row 1:</strong><br>
+          The first row shows the reflectance curve of the sample R(λ) and the spectral power distribution of the selected light source S(λ). The sample can either be selected from prepared examples or drawn directly with the mouse. The reflectance curve describes which fraction of the incident light is reflected at each wavelength.</p>
+          <p><strong>Row 2:</strong><br>
+          The second row shows the convolution of the reflectance curve and the selected illuminant. This produces the stimulus curve Φ(λ). It describes the spectrum of the light that is actually perceived by the eye.</p>
+          <p><strong>Row 3:</strong><br>
+          In the third row, the stimulus curve is convolved with the three CIE colour matching functions x̄(λ), ȳ(λ) and z̄(λ). This produces the spectral contributions to the three CIE XYZ values.</p>
+          <p><strong>Row 4:</strong><br>
+          The fourth row displays the sums over the three convolved spectra. These sums produce the normalized CIE XYZ values of the sample under the selected illuminant.</p>
+          <p>In “Discrete Summation Mode”, the spectra are displayed not as smooth curves but as individual wavelength intervals. This makes visible that real colour measurement works numerically with discrete sums rather than with continuous mathematical integrals.</p>
+          <p>© Christian Greim<br>
+          Created with support from ChatGPT / OpenAI.<br>
+          License: Creative Commons Attribution-ShareAlike (CC BY-SA 4.0)<br>
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">https://creativecommons.org/licenses/by-sa/4.0/</a></p>`,
+        row1Title: "Row 1: Sample and Light",
+        row2Title: "Row 2: Stimulus Curve – Convolution of Light and Reflectance",
+        row3Title: "Row 3: Convolution with the Three Colour Matching Functions",
+        row4Title: "Row 4: Sums over the Curves",
+        reflectanceCaption: "Drawn reflectance curve R(λ): 0 means no reflection, 1 means full reflection.",
+        illuminantCaption: "Relative spectral power distribution of the selected illuminant S(λ).",
+        stimulusCaption: "Stimulus curve Φ(λ) = R(λ) · S(λ). This curve describes, in simplified form, the light that reaches the eye from the sample.",
+        controlsTitle: "Select Light and Sample",
+        discreteModeLabel: "Discrete Summation Mode",
+        illuminantLabel: "Illuminant:",
+        peakLabel: "Peak wavelength:",
+        drawHint: "Tip: Click and drag in the upper-left graph to draw the reflectance curve.",
+        zCaption: "Φ(λ) · z̄(λ): contribution to the Z value",
+        yCaption: "Φ(λ) · ȳ(λ): contribution to the Y value",
+        xCaption: "Φ(λ) · x̄(λ): contribution to the X value",
+        normalizationCaption: "The values are calculated according to the official CIE normalization. The common normalization factor k is derived from the ȳ colour matching function so that an ideal white sample produces Y = 100. For the theoretical narrow-band illuminants, an energy-based scaling is used instead so that the values remain useful for teaching and do not become extremely large at wavelengths where ȳ is very small.",
+        legendStimulus: "Stimulus R·S",
+        legendReflectance: "Reflectance",
+        legendLight: "Light",
+        illuminants: {
+          D50: "D50 – standard light for print/proof",
+          D65: "D65 – daylight, typical for displays/general viewing",
+          A: "A – incandescent light",
+          E: "E – hypothetical equal-energy light",
+          FL: "Fluorescent lamp – simplified line spectrum",
+          LED_WARM: "Warm white LED – simplified spectrum",
+          LED_COOL: "Cool white LED – simplified spectrum",
+          NARROW: "Narrow-band light – single peak",
+          THEORETICAL_NARROW: "Theoretical narrow-band light"
+        },
+        samples: {
+          white: "White sample",
+          gray: "Neutral grey",
+          yellow: "Yellowish sample",
+          cyan: "Cyan-like sample",
+          magenta: "Magenta-like sample",
+          blue: "Bluish sample",
+          red: "Reddish sample",
+          green: "Greenish sample"
+        }
+      },
+      de: {
+        documentTitle: "CIE-XYZ-Faltung aus Remission, Licht und Normvalenzen",
+        title: "CIE-XYZ: Faltung von Remission, Licht und Normvalenzen",
+        introHtml: `
+          <p><strong>1. Zeile:</strong><br>
+          In der ersten Zeile werden die Remissionskurve der Probe R(λ) und die spektrale Leistungsverteilung der gewählten Lichtquelle S(λ) dargestellt. Die Probe kann entweder aus den vorbereiteten Beispielen gewählt oder direkt mit der Maus gezeichnet werden. Die Remissionskurve beschreibt, welcher Anteil des auftreffenden Lichtes bei jeder Wellenlänge reflektiert wird.</p>
+          <p><strong>2. Zeile:</strong><br>
+          In der zweiten Zeile wird die Faltung von Remissionskurve und Lichtart dargestellt. Dadurch entsteht die Reizkurve Φ(λ). Sie beschreibt das Spektrum des Lichtes, das tatsächlich vom Auge wahrgenommen wird.</p>
+          <p><strong>3. Zeile:</strong><br>
+          In der dritten Zeile wird die Reizkurve jeweils mit den drei CIE-Normvalenzfunktionen x̄(λ), ȳ(λ) und z̄(λ) gefaltet. Dadurch entstehen die spektralen Beiträge zu den drei CIE-XYZ-Werten.</p>
+          <p><strong>4. Zeile:</strong><br>
+          In der vierten Zeile werden die Summen über die drei gefalteten Spektren dargestellt. Diese Summen ergeben die normierten CIE-XYZ-Werte der Probe unter der gewählten Lichtart.</p>
+          <p>Im Modus „Diskrete Summendarstellung“ werden die Spektren nicht als glatte Kurven, sondern als einzelne Wellenlängenintervalle dargestellt. Dadurch wird sichtbar, dass reale Farbmetrik numerisch mit diskreten Summen arbeitet und nicht mit kontinuierlichen mathematischen Integralen.</p>
+          <p>© Christian Greim<br>
+          Erstellt mit Unterstützung von ChatGPT / OpenAI.<br>
+          Lizenz: Creative Commons Attribution-ShareAlike (CC BY-SA 4.0)<br>
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">https://creativecommons.org/licenses/by-sa/4.0/</a></p>`,
+        row1Title: "1. Zeile: Probe und Licht",
+        row2Title: "2. Zeile: Reizkurve – Faltung von Licht und Remission",
+        row3Title: "3. Zeile: Faltung mit den drei Normvalenzen",
+        row4Title: "4. Zeile: Summen über die Kurven",
+        reflectanceCaption: "Gemalte Remissionskurve R(λ): 0 bedeutet keine Rückstrahlung, 1 bedeutet vollständige Rückstrahlung.",
+        illuminantCaption: "Relative spektrale Leistungsverteilung der gewählten Lichtart S(λ).",
+        stimulusCaption: "Reizkurve Φ(λ) = R(λ) · S(λ). Diese Kurve beschreibt vereinfacht das Licht, das von der Probe ins Auge gelangt.",
+        controlsTitle: "Licht und Probe auswählen",
+        discreteModeLabel: "Diskrete Summendarstellung",
+        illuminantLabel: "Lichtart:",
+        peakLabel: "Peak-Wellenlänge:",
+        drawHint: "Tipp: In die linke obere Grafik klicken und ziehen, um die Remission zu malen.",
+        zCaption: "Φ(λ) · z̄(λ): Anteil zur Z-Zahl",
+        yCaption: "Φ(λ) · ȳ(λ): Anteil zur Y-Zahl",
+        xCaption: "Φ(λ) · x̄(λ): Anteil zur X-Zahl",
+        normalizationCaption: "Die Werte werden nach der offiziellen CIE-Normierung berechnet. Der gemeinsame Normierungsfaktor k wird aus der ȳ-Normvalenz bestimmt, sodass eine ideale weiße Probe den Wert Y = 100 ergibt. Für die theoretischen schmalbandigen Lichtarten wird stattdessen eine energiebezogene Skalierung verwendet, damit die Werte für Unterrichtszwecke sinnvoll bleiben und bei Wellenlängen mit sehr kleinen ȳ-Werten nicht extrem groß werden.",
+        legendStimulus: "Reiz R·S",
+        legendReflectance: "Remission",
+        legendLight: "Licht",
+        illuminants: {
+          D50: "D50 – Normlicht für Druck/Proof",
+          D65: "D65 – Tageslicht, eher Monitor/Allgemein",
+          A: "A – Glühlampenlicht",
+          E: "E – hypothetisches Gleichenergie-Licht",
+          FL: "Leuchtstoffröhre – vereinfachtes Linienspektrum",
+          LED_WARM: "LED warmweiß – vereinfachtes Spektrum",
+          LED_COOL: "LED kaltweiß – vereinfachtes Spektrum",
+          NARROW: "Schmalbandiges Licht – ein Peak",
+          THEORETICAL_NARROW: "Theoretisches schmalbandiges Licht"
+        },
+        samples: {
+          white: "Weiße Probe",
+          gray: "Neutral grau",
+          yellow: "Gelbliche Probe",
+          cyan: "Cyan-ähnliche Probe",
+          magenta: "Magenta-ähnliche Probe",
+          blue: "Bläuliche Probe",
+          red: "Rötliche Probe",
+          green: "Grünliche Probe"
+        }
+      }
+    };
+
+    const START = 380;
+    const END = 730;
+    const STEP = 5;
+    const wavelengths = [];
+    for (let l = START; l <= END; l += STEP) wavelengths.push(l);
+
+    function gaussian(x, mu, sigma, amp = 1) {
+      return amp * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+    }
+
+    function normalise(arr) {
+      const max = Math.max(...arr);
+      return arr.map(v => max > 0 ? v / max : 0);
+    }
+
+    function alignSpectrum(arr) {
+      // Ensures that every spectrum has exactly as many values as the wavelength grid.
+      // Missing, empty or invalid values are treated as 0.
+      return wavelengths.map((l, i) => Number.isFinite(arr[i]) ? arr[i] : 0);
+    }
+
+    function safeAt(arr, i) {
+      return Number.isFinite(arr[i]) ? arr[i] : 0;
+    }
+
+    // Official CIE 1931 2° colour matching functions in a 5 nm grid (380–730 nm).
+    const xbar = [0.001368,0.002236,0.004243,0.00765,0.01431,0.02319,0.04351,0.07763,0.13438,0.21477,0.2839,0.3285,0.34828,0.34806,0.3362,0.3187,0.2908,0.2511,0.19536,0.1421,0.09564,0.05795001,0.03201,0.0147,0.0049,0.0024,0.0093,0.0291,0.06327,0.1096,0.1655,0.2257499,0.2904,0.3597,0.4334499,0.5120501,0.5945,0.6784,0.7621,0.8425,0.9163,0.9786,1.0263,1.0567,1.0622,1.0456,1.0026,0.9384,0.8544499,0.7514,0.6424,0.5419,0.4479,0.3608,0.2835,0.2187,0.1649,0.1212,0.0874,0.0636,0.04677,0.0329,0.0227,0.01584,0.01135916,0.008110916,0.005790346,0.004109457,0.002899327,0.00204919,0.001439971,0.0009999493];
+    const ybar = [0.000039,0.000064,0.00012,0.000217,0.000396,0.00064,0.00121,0.00218,0.004,0.0073,0.0116,0.01684,0.023,0.0298,0.038,0.048,0.06,0.0739,0.09098,0.1126,0.13902,0.1693,0.20802,0.2586,0.323,0.4073,0.503,0.6082,0.71,0.7932,0.862,0.9148501,0.954,0.9803,0.9949501,1,0.995,0.9786,0.952,0.9154,0.87,0.8163,0.757,0.6949,0.631,0.5668,0.503,0.4412,0.381,0.321,0.265,0.217,0.175,0.1382,0.107,0.0816,0.061,0.04458,0.032,0.0232,0.017,0.01192,0.00821,0.005723,0.004102,0.002929,0.002091,0.001484,0.001047,0.00074];
+    const zbar = [0.00645,0.01055,0.02005,0.03621,0.06785,0.1102,0.2074,0.3713,0.6456,1.03905,1.3856,1.62296,1.74706,1.7826,1.77211,1.7441,1.6692,1.5281,1.28764,1.0419,0.8129501,0.6162,0.46518,0.3533,0.272,0.2123,0.1582,0.1117,0.07824999,0.05725001,0.04216,0.02984,0.0203,0.0134,0.00875,0.00575,0.0039,0.002749999,0.0021,0.0018,0.001650001,0.0014,0.0011,0.001,0.0008,0.0006,0.00034,0.00024,0.00019,0.0001,4.999999e-05,3e-05,2e-05,1e-05,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+    const illuminants = {
+      D50: [24.4479,27.1384,29.8288,39.5377,49.2466,52.8482,56.4497,58.2115,59.9732,58.8686,57.764,66.2653,74.7667,80.9592,87.1517,87.1204,87.0891,90.558,94.027,90.9908,87.9545,90.3894,92.8242,90.057,87.2899,90.6846,94.0793,95.7736,97.4679,96.2072,94.9465,101.868,108.79,107.689,106.589,108.578,110.567,107.294,104.02,104.76,105.5,104.865,104.23,102.174,100.118,98.1671,96.2161,96.3342,96.4522,95.1964,93.9405,93.8428,93.7451,90.6367,87.5282,89.4494,91.3706,90.057,88.7435,86.1348,83.5262,83.4939,83.4617,81.863,80.2643,80.1207,79.9771,81.2462,82.5154,83.7846,85.0538],
+      D65: [49.9227,52.2611,54.5994,68.6463,82.6931,87.0568,91.4204,92.395,93.3695,89.9994,86.6293,95.7206,104.812,110.936,117.06,117.41,117.761,116.336,114.861,115.392,115.923,112.367,108.811,109.082,109.354,108.578,107.802,106.296,104.79,106.239,107.689,106.047,104.405,104.225,104.046,102.023,100,98.1671,96.3342,96.0611,95.788,92.2368,88.6856,89.3459,90.0062,89.8026,89.5991,88.6489,87.6987,85.4936,83.2886,83.4939,83.6992,81.863,80.0268,80.1207,80.2146,81.2462,82.2778,80.281,78.2842,74.0027,69.7213,70.6652,71.6091,72.979,74.349,67.9765,61.604,65.7448,69.8856],
+      A: [9.8022,10.9072,12.0934,13.3628,14.717,16.1574,17.6852,19.301,21.0057,22.7994,24.6823,26.6543,28.7147,30.863,33.0987,35.4215,37.8306,40.3252,42.9045,45.5675,48.3135,51.1413,54.0502,57.0392,60.1076,63.254,66.4777,69.7778,73.1537,76.6048,80.1303,83.7297,87.4023,91.1474,94.9644,98.8527,102.812,106.841,110.939,115.106,119.34,123.641,128.008,132.44,136.935,141.494,146.114,150.796,155.538,160.339,165.198,170.114,175.086,180.113,185.193,190.326,195.51,200.744,206.027,211.359,216.737,222.161,227.629,233.14,238.694,244.289,249.924,255.598,261.31,267.059,272.844,278.664],
+      E: Array(wavelengths.length).fill(100)
+    };
+
+    let reflectance = wavelengths.map(l => 0.58 + 0.12 * Math.sin((l - 380) / 55));
+    let drawing = false;
+
+    const canvases = {
+      reflectance: document.getElementById("reflectanceCanvas"),
+      illuminant: document.getElementById("illuminantCanvas"),
+      stimulus: document.getElementById("stimulusCanvas"),
+      x: document.getElementById("xCanvas"),
+      y: document.getElementById("yCanvas"),
+      z: document.getElementById("zCanvas")
+    };
+
+    function t() {
+      return TEXT[UI_LANGUAGE] || TEXT.en;
+    }
+
+    function applyLanguage() {
+      const lang = t();
+      document.documentElement.lang = UI_LANGUAGE;
+      document.title = lang.documentTitle;
+      document.getElementById("title").textContent = lang.title;
+      document.getElementById("intro").innerHTML = lang.introHtml;
+      ["row1Title", "row2Title", "row3Title", "row4Title", "reflectanceCaption", "illuminantCaption", "stimulusCaption", "controlsTitle", "discreteModeLabel", "illuminantLabel", "peakLabel", "drawHint", "zCaption", "yCaption", "xCaption", "normalizationCaption"].forEach(id => {
+        document.getElementById(id).textContent = lang[id];
+      });
+
+      const illuminantSelect = document.getElementById("illuminant");
+      illuminantSelect.innerHTML = "";
+      Object.entries(lang.illuminants).forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        illuminantSelect.appendChild(option);
+      });
+
+      const sampleButtons = document.getElementById("sampleButtons");
+      sampleButtons.innerHTML = "";
+      Object.entries(lang.samples).forEach(([sample, label]) => {
+        const button = document.createElement("button");
+        button.id = sample + "Patch";
+        button.textContent = label;
+        sampleButtons.appendChild(button);
+      });
+    }
+
+    function makeIlluminant(kind) {
+      let s;
+      if (typeof illuminants !== "undefined" && illuminants[kind]) {
+        s = alignSpectrum(illuminants[kind]);
+        return normalise(s.map(v => Math.max(0, v)));
+      }
+      if (kind === "FL") {
+        s = wavelengths.map(l => 0.18 + gaussian(l, 436, 5, 0.95) + gaussian(l, 546, 7, 0.88) + gaussian(l, 611, 9, 0.72) + gaussian(l, 490, 35, 0.20));
+      } else if (kind === "LED_WARM") {
+        s = wavelengths.map(l => 0.08 + gaussian(l, 455, 17, 0.80) + gaussian(l, 610, 80, 1.05));
+      } else if (kind === "LED_COOL") {
+        s = wavelengths.map(l => 0.08 + gaussian(l, 450, 15, 1.15) + gaussian(l, 545, 70, 0.82));
+      } else if (kind === "NARROW") {
+        const peak = Number(document.getElementById("peakSlider").value);
+        s = wavelengths.map(l => gaussian(l, peak, 7, 1.0));
+      } else if (kind === "THEORETICAL_NARROW") {
+        const peak = Number(document.getElementById("peakSlider").value);
+        s = wavelengths.map(l => Math.abs(l - peak) <= STEP / 2 ? 1.0 : 0.0);
+      } else {
+        s = wavelengths.map(l => 1.0);
+      }
+      return normalise(s.map(v => Math.max(0, v)));
+    }
+
+    function setupCanvas(canvas) {
+      const ratio = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(300, Math.round(rect.width * ratio));
+      canvas.height = Math.max(180, Math.round(rect.height * ratio));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+
+    function drawAxes(ctx, w, h, yMax = 1, labelY = "relative") {
+      ctx.clearRect(0, 0, w, h);
+      const padL = 46, padR = 16, padT = 14, padB = 34;
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--grid');
+      ctx.lineWidth = 1;
+      ctx.font = "12px system-ui";
+      ctx.fillStyle = "#6b7280";
+      for (let i = 0; i <= 5; i++) {
+        const y = padT + i * (h - padT - padB) / 5;
+        ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+      }
+      for (let l = 400; l <= 700; l += 100) {
+        const x = padL + (l - START) / (END - START) * (w - padL - padR);
+        ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, h - padB); ctx.stroke();
+        ctx.fillText(String(l), x - 10, h - 12);
+      }
+      ctx.strokeStyle = "#9ca3af";
+      ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, h - padB); ctx.lineTo(w - padR, h - padB); ctx.stroke();
+      ctx.fillText("λ / nm", w - 58, h - 12);
+      ctx.fillText(labelY, 8, 18);
+      return { padL, padR, padT, padB, plotW: w - padL - padR, plotH: h - padT - padB, yMax };
+    }
+
+    function drawCurve(canvas, curves, options = {}) {
+      setupCanvas(canvas);
+      const ctx = canvas.getContext("2d");
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      const maxVal = options.maxY || Math.max(1, ...curves.flatMap(c => c.data));
+      const a = drawAxes(ctx, w, h, maxVal, options.labelY || "relative");
+      curves.slice().sort((a,b) => {
+        const aPriority = a.foreground ? 2 : (a.background ? 0 : 1);
+        const bPriority = b.foreground ? 2 : (b.background ? 0 : 1);
+        return aPriority - bPriority;
+      }).forEach(c => {
+        ctx.strokeStyle = c.color;
+        ctx.lineWidth = c.width || 2.5;
+        ctx.beginPath();
+
+        if (c.discreteMode) {
+          const barWidth = a.plotW / wavelengths.length;
+          c.data.forEach((v, i) => {
+            const x = a.padL + i / (wavelengths.length - 1) * a.plotW;
+            const y = a.padT + (1 - Math.min(v / maxVal, 1)) * a.plotH;
+            const baseY = a.padT + a.plotH;
+            if (c.filledDiscrete) {
+              ctx.fillStyle = c.fillColor || c.color;
+              ctx.fillRect(x - barWidth * 0.45, y, barWidth * 0.9, baseY - y);
+            } else {
+              ctx.strokeStyle = c.color;
+              ctx.lineWidth = c.width || 1.5;
+              ctx.strokeRect(x - barWidth * 0.45, y, barWidth * 0.9, baseY - y);
+            }
+          });
+        } else if (c.stepMode) {
+          c.data.forEach((v, i) => {
+            const x = a.padL + i / (wavelengths.length - 1) * a.plotW;
+            const y = a.padT + (1 - Math.min(v / maxVal, 1)) * a.plotH;
+            if (i === 0) ctx.moveTo(x, y);
+            else {
+              const prevY = a.padT + (1 - Math.min(c.data[i - 1] / maxVal, 1)) * a.plotH;
+              ctx.lineTo(x, prevY);
+              ctx.lineTo(x, y);
+            }
+          });
+        } else {
+          c.data.forEach((v, i) => {
+            const x = a.padL + i / (wavelengths.length - 1) * a.plotW;
+            const y = a.padT + (1 - Math.min(v / maxVal, 1)) * a.plotH;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+        }
+        ctx.stroke();
+      });
+
+      if (options.legend) {
+        let x = 58;
+        options.legend.forEach(item => {
+          ctx.strokeStyle = item.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(x, 22); ctx.lineTo(x + 22, 22); ctx.stroke();
+          ctx.fillStyle = "#374151";
+          ctx.font = "13px system-ui";
+          ctx.fillText(item.text, x + 28, 26);
+          x += item.text.length * 8 + 58;
+        });
+      }
+    }
+
+    function compute() {
+      const kind = document.getElementById("illuminant").value;
+      const illum = makeIlluminant(kind);
+      const xb = alignSpectrum(xbar);
+      const yb = alignSpectrum(ybar);
+      const zb = alignSpectrum(zbar);
+      const stimulus = reflectance.map((r, i) => r * safeAt(illum, i));
+      const xCurve = stimulus.map((v, i) => v * safeAt(xb, i));
+      const yCurve = stimulus.map((v, i) => v * safeAt(yb, i));
+      const zCurve = stimulus.map((v, i) => v * safeAt(zb, i));
+      const sum = arr => arr.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0) * STEP;
+      const kindIsNarrow = kind === "NARROW" || kind === "THEORETICAL_NARROW";
+      let k;
+      if (kindIsNarrow) {
+        const energy = sum(illum);
+        k = energy > 0 ? 100 / energy : 0;
+      } else {
+        const denominator = sum(illum.map((s, i) => s * safeAt(yb, i)));
+        k = denominator > 0 ? 100 / denominator : 0;
+      }
+      return {
+        illum, stimulus, xCurve, yCurve, zCurve, xb, yb, zb,
+        X: Number.isFinite(k) ? k * sum(xCurve) : 0,
+        Y: Number.isFinite(k) ? k * sum(yCurve) : 0,
+        Z: Number.isFinite(k) ? k * sum(zCurve) : 0
+      };
+    }
+
+    function redraw() {
+      const lang = t();
+      const c = compute();
+      const discrete = document.getElementById("discreteMode").checked;
+      const isTheoretical = document.getElementById("illuminant").value === "THEORETICAL_NARROW";
+
+      drawCurve(canvases.reflectance, [{ data: reflectance, color: "#6b7280", discreteMode: discrete, width: 1.5 }], { maxY: 1, labelY: "R" });
+      drawCurve(canvases.illuminant, [{ data: c.illum, color: "#d97706", stepMode: isTheoretical, discreteMode: discrete }], { maxY: 1, labelY: "S" });
+      drawCurve(canvases.stimulus, [
+        { data: c.stimulus, color: "#2563eb", foreground: true, stepMode: isTheoretical, discreteMode: discrete },
+        { data: reflectance, color: "#cbd5e1", width: 1.2, discreteMode: discrete },
+        { data: c.illum, color: "#f59e0b", width: 1.2, stepMode: isTheoretical, discreteMode: discrete }
+      ], { maxY: 1, labelY: "Φ", legend: [
+        { text: lang.legendStimulus, color: "#2563eb" },
+        { text: lang.legendReflectance, color: "#9ca3af" },
+        { text: lang.legendLight, color: "#f59e0b" }
+      ] });
+      drawCurve(canvases.z, [
+        { data: c.zCurve.map((v,i) => Math.min(v, c.zb[i])), color: "#2563eb", foreground: true, stepMode: isTheoretical, discreteMode: discrete },
+        { data: c.zb, color: "#60a5fa", width: 1.0, discreteMode: discrete, filledDiscrete: true, background: true, fillColor: "#bfdbfe" }
+      ], { maxY: Math.max(...c.zb) * 1.05, labelY: "Z", legend: [{ text: "Φ·z̄", color: "#2563eb" }] });
+      drawCurve(canvases.y, [
+        { data: c.yCurve.map((v,i) => Math.min(v, c.yb[i])), color: "#16a34a", foreground: true, stepMode: isTheoretical, discreteMode: discrete },
+        { data: c.yb, color: "#4ade80", width: 1.0, discreteMode: discrete, filledDiscrete: true, background: true, fillColor: "#bbf7d0" }
+      ], { maxY: 1, labelY: "Y", legend: [{ text: "Φ·ȳ", color: "#16a34a" }] });
+      drawCurve(canvases.x, [
+        { data: c.xCurve.map((v,i) => Math.min(v, c.xb[i])), color: "#dc2626", foreground: true, stepMode: isTheoretical, discreteMode: discrete },
+        { data: c.xb, color: "#f87171", width: 1.0, discreteMode: discrete, filledDiscrete: true, background: true, fillColor: "#fecaca" }
+      ], { maxY: Math.max(...c.xb) * 1.05, labelY: "X", legend: [{ text: "Φ·x̄", color: "#dc2626" }] });
+      document.getElementById("xVal").textContent = c.X.toFixed(1);
+      document.getElementById("yVal").textContent = c.Y.toFixed(1);
+      document.getElementById("zVal").textContent = c.Z.toFixed(1);
+    }
+
+    function setReflectanceFromPointer(ev) {
+      const canvas = canvases.reflectance;
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.min(Math.max(ev.clientX - rect.left, 0), rect.width);
+      const y = Math.min(Math.max(ev.clientY - rect.top, 0), rect.height);
+      const padL = 46, padR = 16, padT = 14, padB = 34;
+      const plotW = rect.width - padL - padR;
+      const plotH = rect.height - padT - padB;
+      const idx = Math.round(Math.min(Math.max((x - padL) / plotW, 0), 1) * (wavelengths.length - 1));
+      const val = Math.min(Math.max(1 - (y - padT) / plotH, 0), 1);
+      for (let j = -2; j <= 2; j++) {
+        const k = idx + j;
+        if (k >= 0 && k < reflectance.length) {
+          const weight = 1 - Math.abs(j) / 3;
+          reflectance[k] = reflectance[k] * (1 - weight) + val * weight;
+        }
+      }
+      redraw();
+    }
+
+    function updatePeakControl() {
+      const kind = document.getElementById("illuminant").value;
+      const isNarrow = kind === "NARROW" || kind === "THEORETICAL_NARROW";
+      document.getElementById("peakControl").classList.toggle("visible", isNarrow);
+      document.getElementById("peakValue").textContent = document.getElementById("peakSlider").value + " nm";
+    }
+
+    function attachEvents() {
+      canvases.reflectance.addEventListener("pointerdown", ev => { drawing = true; canvases.reflectance.setPointerCapture(ev.pointerId); setReflectanceFromPointer(ev); });
+      canvases.reflectance.addEventListener("pointermove", ev => { if (drawing) setReflectanceFromPointer(ev); });
+      canvases.reflectance.addEventListener("pointerup", () => { drawing = false; });
+      canvases.reflectance.addEventListener("pointerleave", () => { drawing = false; });
+      document.getElementById("illuminant").addEventListener("change", () => { updatePeakControl(); redraw(); });
+      document.getElementById("discreteMode").addEventListener("change", redraw);
+      document.getElementById("peakSlider").addEventListener("input", () => { updatePeakControl(); redraw(); });
+      window.addEventListener("resize", redraw);
+
+      document.getElementById("whitePatch").addEventListener("click", () => { reflectance = wavelengths.map(l => 1.0); redraw(); });
+      document.getElementById("grayPatch").addEventListener("click", () => { reflectance = wavelengths.map(l => 0.45); redraw(); });
+      document.getElementById("yellowPatch").addEventListener("click", () => {
+        reflectance = wavelengths.map(l => Math.max(0.02, Math.min(0.94, 0.03 + 0.89 / (1 + Math.exp(-(l - 500) / 14)))));
+        redraw();
+      });
+      document.getElementById("cyanPatch").addEventListener("click", () => {
+        reflectance = wavelengths.map(l => {
+          const redCutoff = 1 / (1 + Math.exp(-(l - 610) / 18));
+          const blueSuppression = gaussian(l, 420, 24, 0.10);
+          return Math.max(0.03, Math.min(0.82, 0.80 - 0.76 * redCutoff - blueSuppression));
+        });
+        redraw();
+      });
+      document.getElementById("magentaPatch").addEventListener("click", () => {
+        reflectance = wavelengths.map(l => Math.max(0.05, Math.min(0.82, 0.72 - gaussian(l, 535, 42, 0.82) + gaussian(l, 640, 90, 0.12) + gaussian(l, 430, 55, 0.10))));
+        redraw();
+      });
+      document.getElementById("bluePatch").addEventListener("click", () => { reflectance = wavelengths.map(l => Math.min(1, 0.18 + gaussian(l, 455, 45, 0.78) + gaussian(l, 690, 120, 0.10))); redraw(); });
+      document.getElementById("redPatch").addEventListener("click", () => { reflectance = wavelengths.map(l => Math.min(1, 0.12 + gaussian(l, 635, 65, 0.82) + gaussian(l, 430, 70, 0.06))); redraw(); });
+      document.getElementById("greenPatch").addEventListener("click", () => { reflectance = wavelengths.map(l => Math.min(1, 0.14 + gaussian(l, 535, 48, 0.75) + gaussian(l, 700, 90, 0.10))); redraw(); });
+    }
+
+    applyLanguage();
+    attachEvents();
+    updatePeakControl();
+    redraw();
+  </script>
+</body>
+</html>
